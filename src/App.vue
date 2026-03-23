@@ -1,160 +1,242 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
+import { open, save, ask } from '@tauri-apps/plugin-dialog';
 
-const greetMsg = ref("");
-const name = ref("");
+// State
+const content = ref('');
+const filePath = ref<string | null>(null);
+const savedContent = ref('');
+const isModified = computed(() => content.value !== savedContent.value);
 
-async function greet() {
-  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-  greetMsg.value = await invoke("greet", { name: name.value });
+const fileName = computed(() => {
+    if (!filePath.value) return 'Untitled';
+    const parts = filePath.value.replace(/\\/g, '/').split('/');
+    return parts[parts.length - 1] || 'Untitled';
+});
+
+// Prompt user if there are unsaved changes, returns true if safe to proceed
+async function confirmDiscard(): Promise<boolean> {
+    if (!isModified.value) return true;
+    return await ask('You have unsaved changes. Discard them?', {
+        title: 'Unsaved Changes',
+        kind: 'warning',
+    });
 }
+
+// File operations
+async function newFile(): Promise<void> {
+    if (!(await confirmDiscard())) return;
+    content.value = '';
+    filePath.value = null;
+    savedContent.value = '';
+}
+
+async function openFile(): Promise<void> {
+    if (!(await confirmDiscard())) return;
+
+    const selected = await open({
+        filters: [{ name: 'Text Files', extensions: ['txt'] }],
+    });
+    if (!selected) return;
+
+    const path = selected as string;
+    try {
+        const text = await invoke<string>('read_text_file', { path });
+        content.value = text;
+        filePath.value = path;
+        savedContent.value = text;
+    } catch (err) {
+        console.error('Failed to open file:', err);
+    }
+}
+
+async function saveFile(): Promise<void> {
+    if (filePath.value) {
+        try {
+            await invoke('write_text_file', { path: filePath.value, content: content.value });
+            savedContent.value = content.value;
+        } catch (err) {
+            console.error('Failed to save file:', err);
+        }
+    } else {
+        await saveFileAs();
+    }
+}
+
+async function saveFileAs(): Promise<void> {
+    const selected = await save({
+        filters: [{ name: 'Text Files', extensions: ['txt'] }],
+        defaultPath: filePath.value ?? 'untitled.txt',
+    });
+    if (!selected) return;
+
+    try {
+        await invoke('write_text_file', { path: selected, content: content.value });
+        filePath.value = selected;
+        savedContent.value = content.value;
+    } catch (err) {
+        console.error('Failed to save file:', err);
+    }
+}
+
+// Keyboard shortcuts
+function handleKeydown(e: KeyboardEvent): void {
+    const mod = e.metaKey || e.ctrlKey;
+    if (!mod) return;
+
+    const key = e.key.toLowerCase();
+
+    if (key === 'n') { e.preventDefault(); newFile(); }
+    else if (key === 'o') { e.preventDefault(); openFile(); }
+    else if (e.shiftKey && key === 's') { e.preventDefault(); saveFileAs(); }
+    else if (key === 's') { e.preventDefault(); saveFile(); }
+}
+
+onMounted(() => window.addEventListener('keydown', handleKeydown));
+onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
 </script>
 
 <template>
-  <main class="container">
-    <h1>Welcome to Tauri + Vue</h1>
-
-    <div class="row">
-      <a href="https://vite.dev" target="_blank">
-        <img src="/vite.svg" class="logo vite" alt="Vite logo" />
-      </a>
-      <a href="https://tauri.app" target="_blank">
-        <img src="/tauri.svg" class="logo tauri" alt="Tauri logo" />
-      </a>
-      <a href="https://vuejs.org/" target="_blank">
-        <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-      </a>
+    <div class="notepad">
+        <header class="toolbar">
+            <div class="file-info">
+                <span class="file-name">{{ fileName }}</span>
+                <span v-if="isModified" class="modified-indicator">— Edited</span>
+            </div>
+            <nav class="actions">
+                <button @click="newFile" title="New file (⌘N)">New</button>
+                <button @click="openFile" title="Open file (⌘O)">Open</button>
+                <button @click="saveFile" title="Save file (⌘S)">Save</button>
+                <button @click="saveFileAs" title="Save as (⌘⇧S)">Save As</button>
+            </nav>
+        </header>
+        <textarea
+            v-model="content"
+            class="editor"
+            placeholder="Start typing..."
+            spellcheck="false"
+        />
     </div>
-    <p>Click on the Tauri, Vite, and Vue logos to learn more.</p>
-
-    <form class="row" @submit.prevent="greet">
-      <input id="greet-input" v-model="name" placeholder="Enter a name..." />
-      <button type="submit">Greet</button>
-    </form>
-    <p>{{ greetMsg }}</p>
-  </main>
 </template>
 
-<style scoped>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #249b73);
-}
-
-</style>
 <style>
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
+    --bg: #ffffff;
+    --toolbar-bg: #f8f8f8;
+    --border: #e5e5e5;
+    --text: #1a1a1a;
+    --text-secondary: #999999;
+    --button-hover: #ebebeb;
 
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-.container {
-  margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
-  outline: none;
-}
-
-#greet-input {
-  margin-right: 5px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
-  }
+    :root {
+        --bg: #1a1a1a;
+        --toolbar-bg: #222222;
+        --border: #333333;
+        --text: #e0e0e0;
+        --text-secondary: #666666;
+        --button-hover: #2e2e2e;
+    }
 }
 
+html, body, #app {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+}
+</style>
+
+<style scoped>
+.notepad {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 44px;
+    min-height: 44px;
+    border-bottom: 1px solid var(--border);
+    background: var(--toolbar-bg);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.file-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.modified-indicator {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.actions {
+    display: flex;
+    gap: 2px;
+}
+
+.actions button {
+    background: none;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.actions button:hover {
+    background: var(--button-hover);
+}
+
+.editor {
+    flex: 1;
+    padding: 20px 24px;
+    border: none;
+    outline: none;
+    resize: none;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    tab-size: 4;
+}
+
+.editor::placeholder {
+    color: var(--text-secondary);
+}
 </style>
