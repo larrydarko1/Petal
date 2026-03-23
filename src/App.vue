@@ -87,10 +87,19 @@ function handleKeydown(e: KeyboardEvent): void {
 
     const key = e.key.toLowerCase();
 
-    if (key === 'n') { e.preventDefault(); newFile(); }
-    else if (key === 'o') { e.preventDefault(); openFile(); }
-    else if (e.shiftKey && key === 's') { e.preventDefault(); saveFileAs(); }
-    else if (key === 's') { e.preventDefault(); saveFile(); }
+    if (key === 'n') {
+        e.preventDefault();
+        newFile();
+    } else if (key === 'o') {
+        e.preventDefault();
+        openFile();
+    } else if (e.shiftKey && key === 's') {
+        e.preventDefault();
+        saveFileAs();
+    } else if (key === 's') {
+        e.preventDefault();
+        saveFile();
+    }
 }
 
 onMounted(() => window.addEventListener('keydown', handleKeydown));
@@ -105,18 +114,13 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
                 <span v-if="isModified" class="modified-indicator">— Edited</span>
             </div>
             <nav class="actions">
-                <button @click="newFile" title="New file (⌘N)">New</button>
-                <button @click="openFile" title="Open file (⌘O)">Open</button>
-                <button @click="saveFile" title="Save file (⌘S)">Save</button>
-                <button @click="saveFileAs" title="Save as (⌘⇧S)">Save As</button>
+                <button title="New file (⌘N)" @click="newFile">New</button>
+                <button title="Open file (⌘O)" @click="openFile">Open</button>
+                <button title="Save file (⌘S)" @click="saveFile">Save</button>
+                <button title="Save as (⌘⇧S)" @click="saveFileAs">Save As</button>
             </nav>
         </header>
-        <textarea
-            v-model="content"
-            class="editor"
-            placeholder="Start typing..."
-            spellcheck="false"
-        />
+        <textarea v-model="content" class="editor" placeholder="Start typing..." spellcheck="false" />
     </div>
 </template>
 
@@ -153,7 +157,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
     }
 }
 
-html, body, #app {
+html,
+body,
+#app {
     height: 100%;
     overflow: hidden;
     background: var(--bg);
