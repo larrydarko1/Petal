@@ -73,8 +73,8 @@ async function findSourceIcon() {
 
     throw new Error(
         `❌ No source icon found!\n` +
-        `Expected: src/assets/icon.svg or src/assets/icon.png\n` +
-        `Please add your icon source to one of these locations.`,
+            `Expected: src/assets/icon.svg or src/assets/icon.png\n` +
+            `Please add your icon source to one of these locations.`,
     );
 }
 
