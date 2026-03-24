@@ -110,14 +110,14 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
     <div class="notepad">
         <header class="toolbar" data-tauri-drag-region>
             <div class="file-info">
+                <span v-if="isModified" class="modified-dot" />
                 <span class="file-name">{{ fileName }}</span>
-                <span v-if="isModified" class="modified-indicator">— Edited</span>
             </div>
             <nav class="actions">
-                <button title="New file (⌘N)" @click="newFile">New</button>
-                <button title="Open file (⌘O)" @click="openFile">Open</button>
-                <button title="Save file (⌘S)" @click="saveFile">Save</button>
-                <button title="Save as (⌘⇧S)" @click="saveFileAs">Save As</button>
+                <button title="New file (⌘N)" @click="newFile">new</button>
+                <button title="Open file (⌘O)" @click="openFile">open</button>
+                <button title="Save file (⌘S)" @click="saveFile">save</button>
+                <button title="Save as (⌘⇧S)" @click="saveFileAs">save as</button>
             </nav>
         </header>
         <textarea v-model="content" class="editor" placeholder="Start typing..." spellcheck="false" />
@@ -136,31 +136,37 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 16px;
+        padding: 0 14px;
         height: $toolbar-height;
         min-height: $toolbar-height;
         border-bottom: 1px solid var(--border);
-        background: var(--bg);
+        background: var(--bg-toolbar);
         user-select: none;
         -webkit-user-select: none;
 
         .file-info {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             min-width: 0;
 
+            .modified-dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--dot-modified);
+                flex-shrink: 0;
+            }
+
             .file-name {
-                font-size: 13px;
-                font-weight: 600;
+                font-family: $font-stack;
+                font-size: 12px;
+                font-weight: 500;
+                letter-spacing: 0.02em;
+                color: var(--text-secondary);
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
-            }
-
-            .modified-indicator {
-                font-size: 12px;
-                color: var(--text-secondary);
             }
         }
 
@@ -171,16 +177,25 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
             button {
                 background: none;
                 border: none;
-                padding: 6px 12px;
+                padding: 4px 10px;
                 border-radius: $btn-radius;
-                font-size: 13px;
+                font-family: $font-stack;
+                font-size: 11.5px;
                 font-weight: 500;
-                color: var(--text);
+                letter-spacing: 0.03em;
+                color: var(--text-secondary);
                 cursor: pointer;
-                transition: background 0.15s;
+                transition:
+                    background $transition-speed,
+                    color $transition-speed;
 
                 &:hover {
                     background: var(--button-hover);
+                    color: var(--text);
+                }
+
+                &:active {
+                    background: var(--button-active);
                 }
             }
         }
@@ -188,19 +203,26 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
 
     .editor {
         flex: 1;
-        padding: 20px 24px;
+        padding: 24px 28px;
         border: none;
         outline: none;
         resize: none;
         background: var(--bg);
         color: var(--text);
         font-family: $font-stack;
-        font-size: 14px;
-        line-height: 1.6;
+        font-size: 13.5px;
+        line-height: 1.75;
+        letter-spacing: 0.01em;
         tab-size: 4;
+        caret-color: var(--accent);
 
         &::placeholder {
-            color: var(--text-secondary);
+            color: var(--placeholder);
+            font-style: italic;
+        }
+
+        &::selection {
+            background: var(--button-active);
         }
     }
 }

@@ -20,7 +20,7 @@ describe('App', () => {
 
         it('does not show the modified indicator on a clean slate', () => {
             const wrapper = mount(App);
-            expect(wrapper.find('.modified-indicator').exists()).toBe(false);
+            expect(wrapper.find('.modified-dot').exists()).toBe(false);
         });
     });
 
@@ -28,7 +28,7 @@ describe('App', () => {
         it('appears once text is typed', async () => {
             const wrapper = mount(App);
             await wrapper.find('textarea').setValue('hello');
-            expect(wrapper.find('.modified-indicator').exists()).toBe(true);
+            expect(wrapper.find('.modified-dot').exists()).toBe(true);
         });
     });
 
