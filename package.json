@@ -1,7 +1,7 @@
 {
     "name": "petal",
-    "private": true,
     "version": "1.0.0",
+    "license": "MIT",
     "type": "module",
     "scripts": {
         "dev": "tauri dev",
@@ -32,7 +32,7 @@
             "eslint --fix",
             "prettier --write"
         ],
-        "*.{json,md}": [
+        "*.{scss,json,md}": [
             "prettier --write"
         ]
     },

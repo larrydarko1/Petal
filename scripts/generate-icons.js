@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
  * Icon Generator Script for Tauri
- * 
+ *
  * Generates all required icon sizes from a single source SVG/PNG.
  * Generates PNGs, .icns (macOS), and .ico (Windows) automatically.
- * 
+ *
  * Usage: npm run icons:generate
  * Source: src/assets/icon.svg (or icon.png)
  * Output: src-tauri/icons/
- * 
+ *
  * Requirements:
  * - Sharp: npm install --save-dev sharp
  * - icon-gen: npm install --save-dev icon-gen
@@ -49,9 +49,7 @@ const ICON_SPECS = {
     ],
 
     // General purpose (needed for icon-gen input & fallback)
-    general: [
-        { name: 'icon.png', size: 512 },
-    ],
+    general: [{ name: 'icon.png', size: 512 }],
 };
 
 // Paths
@@ -75,8 +73,8 @@ async function findSourceIcon() {
 
     throw new Error(
         `❌ No source icon found!\n` +
-        `Expected: src/assets/icon.svg or src/assets/icon.png\n` +
-        `Please add your icon source to one of these locations.`
+            `Expected: src/assets/icon.svg or src/assets/icon.png\n` +
+            `Please add your icon source to one of these locations.`,
     );
 }
 
@@ -106,11 +104,7 @@ async function convertSvgToPng(svgPath) {
 async function generatePngIcons(sourceFile) {
     console.log('🖼️  Generating PNG icons...');
 
-    const allSpecs = [
-        ...ICON_SPECS.tauri,
-        ...ICON_SPECS.windowsStore,
-        ...ICON_SPECS.general,
-    ];
+    const allSpecs = [...ICON_SPECS.tauri, ...ICON_SPECS.windowsStore, ...ICON_SPECS.general];
 
     for (const spec of allSpecs) {
         const outputPath = path.join(ICONS_DIR, spec.name);
@@ -162,18 +156,13 @@ async function generatePlatformIcons() {
  * Helper to run icon-gen via npm/npx
  */
 function runIconGen(input, output, type) {
-    return new Promise((resolve, reject) => {
-        const child = spawn('npx', [
-            'icon-gen',
-            '-i', input,
-            '-o', output,
-            '-t', type,
-        ]);
+    return new Promise((resolve, _reject) => {
+        const child = spawn('npx', ['icon-gen', '-i', input, '-o', output, '-t', type]);
 
-        let error = '';
+        let stderr = '';
 
         child.stderr.on('data', (data) => {
-            error += data.toString();
+            stderr += data.toString();
         });
 
         child.on('close', (code) => {
@@ -182,6 +171,7 @@ function runIconGen(input, output, type) {
                 resolve();
             } else {
                 console.log(`   ⚠️  Could not generate .${type} (icon-gen may need system dependencies)`);
+                if (stderr) console.log(`   stderr: ${stderr.trim()}`);
                 console.log(`   💡 Try online converter: https://www.icoconvert.com/`);
                 resolve(); // Don't fail, just warn
             }
@@ -241,7 +231,6 @@ async function generateIcons() {
 
         console.log('✨ Icon generation complete!\n');
         console.log('📁 Generated in: src-tauri/icons/\n');
-
     } catch (err) {
         console.error(err.message);
         process.exit(1);
