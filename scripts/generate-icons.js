@@ -73,8 +73,8 @@ async function findSourceIcon() {
 
     throw new Error(
         `❌ No source icon found!\n` +
-            `Expected: src/assets/icon.svg or src/assets/icon.png\n` +
-            `Please add your icon source to one of these locations.`,
+        `Expected: src/assets/icon.svg or src/assets/icon.png\n` +
+        `Please add your icon source to one of these locations.`,
     );
 }
 
@@ -114,7 +114,8 @@ async function generatePngIcons(sourceFile) {
                     fit: 'cover',
                     position: 'center',
                 })
-                .png({ quality: 90 })
+                .ensureAlpha()
+                .png({ quality: 90, force: true, palette: false })
                 .toFile(outputPath);
             process.stdout.write(`   ✓ ${spec.name}\n`);
         } catch (err) {
@@ -140,24 +141,19 @@ async function generatePlatformIcons() {
     }
 
     console.log('🎨 Generating platform-specific formats...');
-
-    // Generate .icns (macOS)
-    console.log('\n📱 Generating icon.icns (macOS)...');
-    await runIconGen(iconPng, ICONS_DIR, 'icns');
-
-    // Generate .ico (Windows)
-    console.log('\n🪟 Generating icon.ico (Windows)...');
-    await runIconGen(iconPng, ICONS_DIR, 'ico');
+    console.log('\n📦 Generating .icns (macOS) and .ico (Windows)...');
+    await runIconGen(iconPng, ICONS_DIR);
 
     console.log();
 }
 
 /**
  * Helper to run icon-gen via npm/npx
+ * Generates both .icns (macOS) and .ico (Windows) in a single call
  */
-function runIconGen(input, output, type) {
+function runIconGen(input, output) {
     return new Promise((resolve, _reject) => {
-        const child = spawn('npx', ['icon-gen', '-i', input, '-o', output, '-t', type]);
+        const child = spawn('npx', ['icon-gen', '-i', input, '-o', output]);
 
         let stderr = '';
 
@@ -167,12 +163,13 @@ function runIconGen(input, output, type) {
 
         child.on('close', (code) => {
             if (code === 0) {
-                console.log(`   ✓ Generated icon.${type}`);
+                console.log(`   ✓ Generated icon.icns and icon.ico`);
                 resolve();
             } else {
-                console.log(`   ⚠️  Could not generate .${type} (icon-gen may need system dependencies)`);
+                console.log(`   ⚠️  Could not generate platform icons (icon-gen may need system dependencies)`);
                 if (stderr) console.log(`   stderr: ${stderr.trim()}`);
-                console.log(`   💡 Try online converter: https://www.icoconvert.com/`);
+                console.log(`   💡 macOS users: install with: brew install libpng`);
+                console.log(`   💡 Or use online converter: https://www.icoconvert.com/`);
                 resolve(); // Don't fail, just warn
             }
         });
