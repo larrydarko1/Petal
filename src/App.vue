@@ -108,7 +108,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
 
 <template>
     <div class="notepad">
-        <header class="toolbar">
+        <header class="toolbar" data-tauri-drag-region>
             <div class="file-info">
                 <span class="file-name">{{ fileName }}</span>
                 <span v-if="isModified" class="modified-indicator">— Edited</span>
@@ -124,125 +124,84 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
     </div>
 </template>
 
-<style>
-*,
-*::before,
-*::after {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+<style scoped lang="scss">
+@use './style.scss' as *;
 
-:root {
-    --bg: #ffffff;
-    --toolbar-bg: #f8f8f8;
-    --border: #e5e5e5;
-    --text: #1a1a1a;
-    --text-secondary: #999999;
-    --button-hover: #ebebeb;
-
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg: #1a1a1a;
-        --toolbar-bg: #222222;
-        --border: #333333;
-        --text: #e0e0e0;
-        --text-secondary: #666666;
-        --button-hover: #2e2e2e;
-    }
-}
-
-html,
-body,
-#app {
-    height: 100%;
-    overflow: hidden;
-    background: var(--bg);
-    color: var(--text);
-}
-</style>
-
-<style scoped>
 .notepad {
     display: flex;
     flex-direction: column;
     height: 100vh;
-}
 
-.toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    height: 44px;
-    min-height: 44px;
-    border-bottom: 1px solid var(--border);
-    background: var(--toolbar-bg);
-    user-select: none;
-    -webkit-user-select: none;
-}
+    .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        height: $toolbar-height;
+        min-height: $toolbar-height;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg);
+        user-select: none;
+        -webkit-user-select: none;
 
-.file-info {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-}
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
 
-.file-name {
-    font-size: 13px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+            .file-name {
+                font-size: 13px;
+                font-weight: 600;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
 
-.modified-indicator {
-    font-size: 12px;
-    color: var(--text-secondary);
-}
+            .modified-indicator {
+                font-size: 12px;
+                color: var(--text-secondary);
+            }
+        }
 
-.actions {
-    display: flex;
-    gap: 2px;
-}
+        .actions {
+            display: flex;
+            gap: 2px;
 
-.actions button {
-    background: none;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text);
-    cursor: pointer;
-    transition: background 0.15s;
-}
+            button {
+                background: none;
+                border: none;
+                padding: 6px 12px;
+                border-radius: $btn-radius;
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--text);
+                cursor: pointer;
+                transition: background 0.15s;
 
-.actions button:hover {
-    background: var(--button-hover);
-}
+                &:hover {
+                    background: var(--button-hover);
+                }
+            }
+        }
+    }
 
-.editor {
-    flex: 1;
-    padding: 20px 24px;
-    border: none;
-    outline: none;
-    resize: none;
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-    font-size: 14px;
-    line-height: 1.6;
-    tab-size: 4;
-}
+    .editor {
+        flex: 1;
+        padding: 20px 24px;
+        border: none;
+        outline: none;
+        resize: none;
+        background: var(--bg);
+        color: var(--text);
+        font-family: $font-stack;
+        font-size: 14px;
+        line-height: 1.6;
+        tab-size: 4;
 
-.editor::placeholder {
-    color: var(--text-secondary);
+        &::placeholder {
+            color: var(--text-secondary);
+        }
+    }
 }
 </style>

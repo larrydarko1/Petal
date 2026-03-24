@@ -1,0 +1,44 @@
+$font-stack: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+$toolbar-height: 44px;
+$btn-radius: 6px;
+
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #ffffff;
+    --toolbar-bg: #f8f8f8;
+    --border: #e5e5e5;
+    --text: #1a1a1a;
+    --text-secondary: #999999;
+    --button-hover: #ebebeb;
+
+    font-family: $font-stack;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    @media (prefers-color-scheme: dark) {
+        --bg: #1a1a1a;
+        --toolbar-bg: #222222;
+        --border: #333333;
+        --text: #e0e0e0;
+        --text-secondary: #666666;
+        --button-hover: #2e2e2e;
+    }
+
+
+}
+
+html,
+body,
+#app {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+}
