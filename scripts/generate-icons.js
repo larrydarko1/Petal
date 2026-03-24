@@ -161,8 +161,18 @@ function runIconGen(input, output) {
             stderr += data.toString();
         });
 
-        child.on('close', (code) => {
+        child.on('close', async (code) => {
             if (code === 0) {
+                // icon-gen outputs app.ico / app.icns by default; rename to expected names
+                const renameIfExists = async (from, to) => {
+                    try {
+                        await fs.rename(from, to);
+                    } catch {
+                        // already correctly named or doesn't exist
+                    }
+                };
+                await renameIfExists(path.join(output, 'app.ico'), path.join(output, 'icon.ico'));
+                await renameIfExists(path.join(output, 'app.icns'), path.join(output, 'icon.icns'));
                 console.log(`   ✓ Generated icon.icns and icon.ico`);
                 resolve();
             } else {

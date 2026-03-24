@@ -61,8 +61,10 @@ jobs:
               with:
                   toolchain: stable
 
-            - name: Add Apple Silicon target
-              run: rustup target add aarch64-apple-darwin
+            - name: Add Apple Silicon and Intel targets
+              run: |
+                  rustup target add aarch64-apple-darwin
+                  rustup target add x86_64-apple-darwin
 
             - run: npm ci
 
