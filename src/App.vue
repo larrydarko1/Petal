@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open, save, ask } from '@tauri-apps/plugin-dialog';
 
 // State
@@ -8,6 +9,7 @@ const content = ref('');
 const filePath = ref<string | null>(null);
 const savedContent = ref('');
 const isModified = computed(() => content.value !== savedContent.value);
+let unlistenFileOpen: UnlistenFn | undefined;
 
 const fileName = computed(() => {
     if (!filePath.value) return 'Untitled';
@@ -22,6 +24,18 @@ async function confirmDiscard(): Promise<boolean> {
         title: 'Unsaved Changes',
         kind: 'warning',
     });
+}
+
+// Load file content into editor
+async function loadFileContent(path: string): Promise<void> {
+    try {
+        const text = await invoke<string>('read_text_file', { path });
+        content.value = text;
+        filePath.value = path;
+        savedContent.value = text;
+    } catch (err) {
+        console.error('Failed to open file:', err);
+    }
 }
 
 // File operations
@@ -40,15 +54,7 @@ async function openFile(): Promise<void> {
     });
     if (!selected) return;
 
-    const path = selected as string;
-    try {
-        const text = await invoke<string>('read_text_file', { path });
-        content.value = text;
-        filePath.value = path;
-        savedContent.value = text;
-    } catch (err) {
-        console.error('Failed to open file:', err);
-    }
+    await loadFileContent(selected as string);
 }
 
 async function saveFile(): Promise<void> {
@@ -102,8 +108,30 @@ function handleKeydown(e: KeyboardEvent): void {
     }
 }
 
-onMounted(() => window.addEventListener('keydown', handleKeydown));
-onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
+onMounted(async () => {
+    window.addEventListener('keydown', handleKeydown);
+
+    // Check for files opened via OS file association (cold start)
+    try {
+        const pending = await invoke<string[]>('get_pending_files');
+        if (pending.length > 0) {
+            await loadFileContent(pending[0]);
+        }
+    } catch (err) {
+        console.error('Failed to get pending files:', err);
+    }
+
+    // Listen for files opened while app is already running (warm start)
+    unlistenFileOpen = await listen<string>('open-file', async (event) => {
+        if (!(await confirmDiscard())) return;
+        await loadFileContent(event.payload);
+    });
+});
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeydown);
+    unlistenFileOpen?.();
+});
 </script>
 
 <template>
