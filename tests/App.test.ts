@@ -4,6 +4,7 @@ import { mount } from '@vue/test-utils';
 import App from '../src/App.vue';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
+vi.mock('@tauri-apps/api/event', () => ({ listen: vi.fn().mockResolvedValue(vi.fn()) }));
 vi.mock('@tauri-apps/plugin-dialog', () => ({ open: vi.fn(), save: vi.fn(), ask: vi.fn() }));
 
 import { invoke } from '@tauri-apps/api/core';
@@ -57,7 +58,7 @@ describe('App', () => {
             const wrapper = mount(App);
             await wrapper.find('[title="Open file (⌘O)"]').trigger('click');
             await wrapper.vm.$nextTick();
-            expect(vi.mocked(invoke)).not.toHaveBeenCalled();
+            expect(vi.mocked(invoke)).not.toHaveBeenCalledWith('read_text_file', expect.any(Object));
         });
 
         it('reads the file and updates the filename and content on success', async () => {
