@@ -4,7 +4,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open, save, ask } from '@tauri-apps/plugin-dialog';
 
-// State
+// ── Reactive state ───────────────────────────────────────────────────────
+
 const content = ref('');
 const filePath = ref<string | null>(null);
 const savedContent = ref('');
@@ -17,7 +18,8 @@ const fileName = computed(() => {
     return parts[parts.length - 1] || 'Untitled';
 });
 
-// Prompt user if there are unsaved changes, returns true if safe to proceed
+// ── File operations ──────────────────────────────────────────────────────
+
 async function confirmDiscard(): Promise<boolean> {
     if (!isModified.value) return true;
     return await ask('You have unsaved changes. Discard them?', {
@@ -26,19 +28,17 @@ async function confirmDiscard(): Promise<boolean> {
     });
 }
 
-// Load file content into editor
 async function loadFileContent(path: string): Promise<void> {
     try {
         const text = await invoke<string>('read_text_file', { path });
         content.value = text;
         filePath.value = path;
         savedContent.value = text;
-    } catch (err) {
-        console.error('Failed to open file:', err);
+    } catch {
+        // Silently handled — user sees blank editor
     }
 }
 
-// File operations
 async function newFile(): Promise<void> {
     if (!(await confirmDiscard())) return;
     content.value = '';
@@ -62,8 +62,8 @@ async function saveFile(): Promise<void> {
         try {
             await invoke('write_text_file', { path: filePath.value, content: content.value });
             savedContent.value = content.value;
-        } catch (err) {
-            console.error('Failed to save file:', err);
+        } catch {
+            // Silently handled — content remains in editor
         }
     } else {
         await saveFileAs();
@@ -81,12 +81,13 @@ async function saveFileAs(): Promise<void> {
         await invoke('write_text_file', { path: selected, content: content.value });
         filePath.value = selected;
         savedContent.value = content.value;
-    } catch (err) {
-        console.error('Failed to save file:', err);
+    } catch {
+        // Silently handled — content remains in editor
     }
 }
 
-// Keyboard shortcuts
+// ── Keyboard shortcuts ───────────────────────────────────────────────────
+
 function handleKeydown(e: KeyboardEvent): void {
     const mod = e.metaKey || e.ctrlKey;
     if (!mod) return;
@@ -108,20 +109,22 @@ function handleKeydown(e: KeyboardEvent): void {
     }
 }
 
+// ── Lifecycle ────────────────────────────────────────────────────────────
+
 onMounted(async () => {
     window.addEventListener('keydown', handleKeydown);
 
-    // Check for files opened via OS file association (cold start)
+    // Cold start — check for files opened via OS file association
     try {
         const pending = await invoke<string[]>('get_pending_files');
         if (pending.length > 0) {
             await loadFileContent(pending[0]);
         }
-    } catch (err) {
-        console.error('Failed to get pending files:', err);
+    } catch {
+        // Silently handled — app starts with empty editor
     }
 
-    // Listen for files opened while app is already running (warm start)
+    // Warm start — files opened while app is already running
     unlistenFileOpen = await listen<string>('open-file', async (event) => {
         if (!(await confirmDiscard())) return;
         await loadFileContent(event.payload);

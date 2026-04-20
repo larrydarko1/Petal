@@ -1,7 +1,7 @@
 {
     "name": "petal",
     "private": true,
-    "version": "1.0.1",
+    "version": "1.0.2",
     "license": "MIT",
     "type": "module",
     "scripts": {
@@ -24,7 +24,7 @@
         "test:coverage": "vitest run --coverage",
         "preview": "vite preview",
         "tauri": "tauri",
-        "ci:check": "npm run lint && npm run format:check && npm run type-check && npm run build && npm run test",
+        "ci:check": "npm audit --audit-level=high --omit=dev && npm run lint && npm run format:check && npm run type-check && npm run build && npm run test",
         "prepare": "husky",
         "icons:generate": "node scripts/generate-icons.js"
     },
