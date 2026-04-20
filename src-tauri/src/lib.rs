@@ -1,6 +1,9 @@
 use std::fs;
 use std::sync::Mutex;
-use tauri::{Emitter, Manager, PhysicalSize, RunEvent};
+use tauri::{Manager, PhysicalSize};
+
+#[cfg(target_os = "macos")]
+use tauri::{Emitter, RunEvent};
 
 // ── Tauri commands ───────────────────────────────────────────────────────
 
@@ -46,21 +49,38 @@ pub fn run() {
                     let _ = window.set_min_size(Some(PhysicalSize::new(min_width, min_height)));
                 }
             }
+
+            // On Windows/Linux, files opened via OS association arrive as CLI arguments
+            #[cfg(not(target_os = "macos"))]
+            {
+                let args: Vec<String> = std::env::args().skip(1).collect();
+                for arg in args {
+                    let path = std::path::Path::new(&arg);
+                    if path.is_file() {
+                        if let Some(state) = app.try_state::<PendingFiles>() {
+                            state.0.lock().unwrap().push(arg);
+                        }
+                    }
+                }
+            }
+
             Ok(())
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    app.run(|app_handle, event| {
-        if let RunEvent::Opened { urls } = event {
+    app.run(|_app_handle, _event| {
+        // macOS delivers opened files via Apple Events
+        #[cfg(target_os = "macos")]
+        if let RunEvent::Opened { urls } = _event {
             for url in urls {
                 if url.scheme() == "file" {
                     if let Ok(path) = url.to_file_path() {
                         let path_str = path.to_string_lossy().to_string();
-                        if let Some(state) = app_handle.try_state::<PendingFiles>() {
+                        if let Some(state) = _app_handle.try_state::<PendingFiles>() {
                             state.0.lock().unwrap().push(path_str.clone());
                         }
-                        let _ = app_handle.emit("open-file", &path_str);
+                        let _ = _app_handle.emit("open-file", &path_str);
                     }
                 }
             }
