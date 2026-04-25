@@ -1,17 +1,37 @@
 // App — component behaviour: initial state, modified indicator, file operations.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
 import App from '../src/App.vue';
+
+// vi.hoisted ensures these refs are initialised before vi.mock factories run
+const { mockClose, closeHandlers } = vi.hoisted(() => ({
+    mockClose: vi.fn(),
+    closeHandlers: {
+        current: undefined as ((e: { preventDefault(): void }) => Promise<void>) | undefined,
+    },
+}));
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
 vi.mock('@tauri-apps/api/event', () => ({ listen: vi.fn().mockResolvedValue(vi.fn()) }));
 vi.mock('@tauri-apps/plugin-dialog', () => ({ open: vi.fn(), save: vi.fn(), ask: vi.fn() }));
+vi.mock('@tauri-apps/api/window', () => ({
+    getCurrentWindow: vi.fn(() => ({
+        onCloseRequested: vi.fn(async (cb: (e: { preventDefault(): void }) => Promise<void>) => {
+            closeHandlers.current = cb;
+            return vi.fn();
+        }),
+        close: mockClose,
+    })),
+}));
 
 import { invoke } from '@tauri-apps/api/core';
 import { open, save, ask } from '@tauri-apps/plugin-dialog';
 
 describe('App', () => {
-    beforeEach(() => vi.clearAllMocks());
+    beforeEach(() => {
+        vi.clearAllMocks();
+        closeHandlers.current = undefined;
+    });
 
     describe('initial state', () => {
         it('shows "Untitled" when no file is open', () => {
@@ -103,6 +123,40 @@ describe('App', () => {
                 path: fakePath,
                 content: 'edited content',
             });
+        });
+    });
+
+    describe('close window with unsaved changes', () => {
+        it('does not prompt when there are no unsaved changes', async () => {
+            mount(App);
+            await flushPromises();
+            const event = { preventDefault: vi.fn() };
+            await closeHandlers.current?.(event);
+            expect(event.preventDefault).not.toHaveBeenCalled();
+            expect(vi.mocked(ask)).not.toHaveBeenCalled();
+        });
+
+        it('prevents close and shows a warning dialog when there are unsaved changes', async () => {
+            vi.mocked(ask).mockResolvedValue(false);
+            const wrapper = mount(App);
+            await flushPromises();
+            await wrapper.find('textarea').setValue('unsaved text');
+            const event = { preventDefault: vi.fn() };
+            await closeHandlers.current?.(event);
+            expect(event.preventDefault).toHaveBeenCalledOnce();
+            expect(vi.mocked(ask)).toHaveBeenCalledOnce();
+            expect(mockClose).not.toHaveBeenCalled();
+        });
+
+        it('destroys the window when the user confirms closing with unsaved changes', async () => {
+            vi.mocked(ask).mockResolvedValue(true);
+            const wrapper = mount(App);
+            await flushPromises();
+            await wrapper.find('textarea').setValue('unsaved text');
+            const event = { preventDefault: vi.fn() };
+            await closeHandlers.current?.(event);
+            expect(event.preventDefault).toHaveBeenCalledOnce();
+            expect(mockClose).toHaveBeenCalledOnce();
         });
     });
 });

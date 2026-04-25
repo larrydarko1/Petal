@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open, save, ask } from '@tauri-apps/plugin-dialog';
 
 // ── Reactive state ───────────────────────────────────────────────────────
@@ -11,6 +12,8 @@ const filePath = ref<string | null>(null);
 const savedContent = ref('');
 const isModified = computed(() => content.value !== savedContent.value);
 let unlistenFileOpen: UnlistenFn | undefined;
+let unlistenCloseRequested: UnlistenFn | undefined;
+let forceClose = false;
 
 const fileName = computed(() => {
     if (!filePath.value) return 'Untitled';
@@ -129,11 +132,27 @@ onMounted(async () => {
         if (!(await confirmDiscard())) return;
         await loadFileContent(event.payload);
     });
+
+    // Intercept window close — warn if there are unsaved changes
+    const appWindow = getCurrentWindow();
+    unlistenCloseRequested = await appWindow.onCloseRequested(async (event) => {
+        if (!isModified.value || forceClose) return;
+        event.preventDefault();
+        const confirmed = await ask(
+            'You have unsaved changes. If you close now, all data will be lost. Are you sure?',
+            { title: 'Unsaved Changes', kind: 'warning' },
+        );
+        if (confirmed) {
+            forceClose = true;
+            await appWindow.close();
+        }
+    });
 });
 
 onUnmounted(() => {
     window.removeEventListener('keydown', handleKeydown);
     unlistenFileOpen?.();
+    unlistenCloseRequested?.();
 });
 </script>
 
